@@ -59,7 +59,7 @@ class PCG_VILLAGE_API UPathRefinement : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 public:
 	UFUNCTION(BlueprintCallable, Category = "Pathways")
-	static void PathRefinement(USplineComponent* SplineComponent, FPathRefinementSettings Settings, FWorldParams WorldParams, bool preserveSegments = false);
+	static void PathRefinement(USplineComponent* SplineComponent, FPathRefinementSettings Settings, FWorldParams WorldParams, bool preserveSplineSegments = false);
 private:
 	static TArray<FVector> GenerateCandidatePoints(FVector V, FVector Prev, FVector Next, FPathRefinementSettings& Settings, FWorldParams& WorldParams);
 	static FVector GetBestCandidatePoint(FVector Prev, FVector Next, TArray<FVector>& CandidatePoints, FPathRefinementSettings& Settings);

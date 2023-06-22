@@ -6,24 +6,6 @@
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Misc/DateTime.h"
 
-TArray<double> durations;
-
-double arrayAverage(const TArray<double>& arr)
-{
-	if (arr.Num() == 0)
-	{
-		return 0.0;
-	}
-
-	double sum = 0.0;
-
-	for (int i = 0; i < arr.Num(); i++)
-	{
-		sum += arr[i];
-	}
-
-	return sum / arr.Num();
-}
 
 float UPathRefinement::Cost(FVector V1, FVector V2, FPathRefinementSettings& Settings)
 {
@@ -42,19 +24,11 @@ float UPathRefinement::Cost(FVector V1, FVector V2, FPathRefinementSettings& Set
 
 float UPathRefinement::GetZAtWorldLocation(FVector V, FWorldParams& WorldParams)
 {
-	double StartTime = FPlatformTime::Seconds();
-
 	FVector2D UV = (FVector2D(V) + WorldParams.WorldSize / 2) / WorldParams.WorldSize;
 	UV *= static_cast<double>(WorldParams.LandscapeResolution) / WorldParams.HeightmapResolution;
 	FColor val = UKismetRenderingLibrary::ReadRenderTargetUV(NULL, WorldParams.Heightmap, UV.X, UV.Y);
 	uint16 HeightRG = (static_cast<uint16>(val.R) << 8) | static_cast<uint16>(val.G);
 	float height = (HeightRG - 32768.f) * WorldParams.LandscapeZScale / 128.f;
-
-	double EndTime = FPlatformTime::Seconds();
-	double Duration = EndTime - StartTime;
-
-	durations.Add(Duration);
-
 	return height;
 }
 
@@ -147,7 +121,7 @@ void UPathRefinement::RefinementStep(TDoubleLinkedList<FVector>* Points, FPathRe
 	}
 }
 
-void UPathRefinement::PathRefinement(USplineComponent* SplineComponent, FPathRefinementSettings Settings, FWorldParams WorldParams, bool preserveSegments)
+void UPathRefinement::PathRefinement(USplineComponent* SplineComponent, FPathRefinementSettings Settings, FWorldParams WorldParams, bool preserveSplineSegments)
 {
 	int NumberOfSplinePoints = SplineComponent->GetNumberOfSplinePoints();
 	if (NumberOfSplinePoints < 2)
@@ -157,7 +131,7 @@ void UPathRefinement::PathRefinement(USplineComponent* SplineComponent, FPathRef
 
 	TDoubleLinkedList<FVector> Points = TDoubleLinkedList<FVector>();
 
-	if (preserveSegments)
+	if (preserveSplineSegments)
 	{
 		for (int i = 0; i < NumberOfSplinePoints; i++)
 		{
@@ -178,10 +152,8 @@ void UPathRefinement::PathRefinement(USplineComponent* SplineComponent, FPathRef
 
 	for (int i = 0; i < Settings.Iterations; i++)
 	{
-		// Subdivide edges longer than MaxEdgeLength
 		SubdivideEdges(&Points, Settings, WorldParams);
 
-		// Move point perpendicular to previous and next points
 		for (int j = 0; j < Settings.RefinementStepsPerIteration; j++)
 		{
 			RefinementStep(&Points, Settings, WorldParams);
@@ -193,10 +165,7 @@ void UPathRefinement::PathRefinement(USplineComponent* SplineComponent, FPathRef
 	double Duration = EndTime - StartTime;
 	UE_LOG(LogTemp, Warning, TEXT("Path refinement duration: %f s"), Duration)
 
-		double avgDuration = arrayAverage(durations);
-	UE_LOG(LogTemp, Warning, TEXT("Height calculation with texture lookup: %f ns"), avgDuration / 1000000)
-
-		SplineComponent->ClearSplinePoints(false);
+	SplineComponent->ClearSplinePoints(false);
 	auto CurrentNode = Points.GetHead();
 	while (CurrentNode != nullptr)
 	{
